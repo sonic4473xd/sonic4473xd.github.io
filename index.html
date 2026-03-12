@@ -1,91 +1,61 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Adsgram Test Mini App</title>
-    <!-- Подключаем скрипт Adsgram (ОБЯЗАТЕЛЬНО) -->
+    <title>Adsgram Test</title>
+    <!-- 1. Скрипт ТГ (важно для инициализации) -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- 2. Скрипт Рекламы -->
     <script src="https://adsgram.ai/sdk/v1/adsgram-sdk.js"></script>
-    <!-- Подключаем React и Tailwind для работы прямо в браузере -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { background-color: #0f172a; color: white; margin: 0; font-family: sans-serif; }
-    </style>
 </head>
-<body>
-    <div id="root"></div>
+<body class="bg-slate-900 text-white flex items-center justify-center min-h-screen">
 
-    <script type="text/babel">
-        const { useState } = React;
+    <div class="text-center p-10 bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 w-80">
+        <h1 class="text-xl font-bold mb-4">Тест Рекламы</h1>
+        <p class="text-slate-400 text-sm mb-6">Block ID: 430 (Test)</p>
+        
+        <button id="adBtn" class="bg-blue-600 hover:bg-blue-500 active:scale-95 transition-all w-full py-4 rounded-xl font-bold shadow-lg">
+            ПОКАЗАТЬ ТЕСТ
+        </button>
 
-        const App = () => {
-            const [balance, setBalance] = useState(0);
-            const [status, setStatus] = useState('ready'); // ready, loading
+        <div id="status" class="mt-6 text-xs font-mono text-slate-500 break-all">
+            Ожидание нажатия...
+        </div>
+    </div>
 
-            const handleWatchAd = () => {
-                // Проверка на наличие Adsgram (работает в ТГ)
-                if (!window.Adsgram) {
-                    alert("SDK Adsgram не найден. Если вы в браузере, реклама не загрузится. Откройте через Telegram.");
-                    return;
-                }
+    <script>
+        // Инициализируем Telegram WebApp
+        const webapp = window.Telegram.WebApp;
+        webapp.ready();
+        webapp.expand();
 
-                const AdController = window.Adsgram.init({ blockId: "430" });
-                
-                setStatus('loading');
-                
-                AdController.show()
-                    .then((result) => {
-                        setBalance(prev => prev + 50);
-                        setStatus('ready');
-                        alert("Успешно! +50 кредитов");
-                    })
-                    .catch((result) => {
-                        console.error('Ошибка или пропуск:', result);
-                        setStatus('ready');
-                        alert("Реклама не досмотрена или ошибка блока 430");
-                    });
-            };
+        const btn = document.getElementById('adBtn');
+        const statusDiv = document.getElementById('status');
 
-            return (
-                <div className="flex flex-col items-center justify-center min-h-screen p-6">
-                    <div className="w-full max-w-sm bg-slate-800 border border-slate-700 rounded-[2.5rem] p-8 text-center shadow-2xl">
-                        <div className="bg-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-blue-500/20">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="white"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                        </div>
-                        
-                        <h1 className="text-2xl font-black mb-2 tracking-tight">ADSGRAM TEST</h1>
-                        <p className="text-slate-400 text-xs mb-8 uppercase tracking-widest font-bold">Блок ID: 430</p>
+        // Настройка контроллера Adsgram
+        // blockId 430 предназначен специально для тестов
+        const AdController = window.Adsgram.init({ blockId: "430" });
 
-                        <div className="mb-10">
-                            <p className="text-slate-500 text-[10px] font-black uppercase mb-1">Баланс</p>
-                            <div className="text-6xl font-black">{balance}</div>
-                        </div>
+        btn.onclick = () => {
+            statusDiv.innerText = "Загрузка...";
+            statusDiv.style.color = "#94a3b8";
 
-                        <button 
-                            onClick={handleWatchAd}
-                            disabled={status === 'loading'}
-                            className={`w-full py-5 rounded-2xl font-black text-lg transition-all active:scale-95 ${
-                                status === 'loading' 
-                                ? 'bg-slate-700 text-slate-500' 
-                                : 'bg-white text-black shadow-xl'
-                            }`}
-                        >
-                            {status === 'loading' ? 'ЗАГРУЗКА...' : 'СМОТРЕТЬ РЕКЛАМУ'}
-                        </button>
-
-                        <p className="mt-6 text-[10px] text-slate-500 font-bold uppercase italic">
-                            Работает только внутри Telegram
-                        </p>
-                    </div>
-                </div>
-            );
+            AdController.show()
+                .then((result) => {
+                    // Реклама успешно показана
+                    statusDiv.innerText = "УСПЕХ: Реклама завершена";
+                    statusDiv.style.color = "#4ade80";
+                    console.log("Done:", result);
+                })
+                .catch((error) => {
+                    // Ошибка показа (или закрыли)
+                    statusDiv.innerText = "ОШИБКА: " + JSON.stringify(error);
+                    statusDiv.style.color = "#f87171";
+                    console.error("Error:", error);
+                });
         };
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
     </script>
 </body>
 </html>
