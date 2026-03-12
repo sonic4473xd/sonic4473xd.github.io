@@ -1,45 +1,50 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Adsgram Debugger</title>
+    <title>Adsgram Fix</title>
+    
+    <!-- Telegram SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://adsgram.ai/sdk/v1/adsgram-sdk.js"></script>
+    
+    <!-- Основной скрипт Adsgram (пробуем загрузить) -->
+    <script id="adsgram-script" src="https://adsgram.ai/sdk/v1/adsgram-sdk.js" onerror="handleScriptError()"></script>
+    
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-[#050505] text-white font-sans overflow-hidden">
 
     <div class="flex flex-col h-screen p-4">
-        <!-- Статус бар -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 mb-4 shadow-lg">
-            <h1 class="text-blue-400 font-black text-center uppercase tracking-tighter text-xl">Adsgram Live Test</h1>
-            <p class="text-[10px] text-slate-500 text-center font-bold">ID: 430 (Standard Test Block)</p>
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 mb-4 shadow-xl">
+            <h1 class="text-blue-500 font-black text-center uppercase tracking-tighter text-2xl">Adsgram Loader</h1>
+            <div id="sdkStatus" class="text-[10px] text-center font-bold mt-2 px-3 py-1 rounded-full bg-yellow-500/10 text-yellow-500 inline-block mx-auto w-full">
+                ПРОВЕРКА СОЕДИНЕНИЯ...
+            </div>
         </div>
 
-        <!-- Кнопка запуска -->
-        <button id="adBtn" class="bg-white text-black font-black py-5 rounded-2xl shadow-[0_0_20px_rgba(255,255,255,0.1)] active:scale-95 transition-all mb-4 text-lg">
-            ЗАПУСТИТЬ РЕКЛАМУ
+        <button id="adBtn" class="bg-blue-600 text-white font-black py-6 rounded-2xl shadow-lg active:scale-95 transition-all mb-4 text-xl disabled:bg-slate-800 disabled:text-slate-600">
+            ПРОВЕРИТЬ РЕКЛАМУ
         </button>
 
-        <!-- Лог событий -->
-        <div class="flex-1 bg-black border border-slate-800 rounded-2xl p-4 overflow-y-auto font-mono text-[10px]">
-            <div class="text-slate-500 mb-2 border-b border-slate-800 pb-1 italic">Системные логи:</div>
+        <!-- Блок логов -->
+        <div class="flex-1 bg-black border border-slate-800 rounded-2xl p-4 overflow-y-auto font-mono text-[10px] relative">
             <div id="logContent" class="space-y-1"></div>
+            <button onclick="location.reload()" class="absolute top-2 right-2 bg-slate-800 px-2 py-1 rounded text-[8px] uppercase">Обновить страницу</button>
         </div>
 
-        <!-- Кнопка очистки -->
-        <button onclick="document.getElementById('logContent').innerHTML = ''" class="mt-4 text-[10px] text-slate-600 font-bold uppercase underline">
-            Очистить логи
-        </button>
+        <div id="retryArea" class="hidden mt-4">
+            <button onclick="retryLoadSDK()" class="w-full py-3 bg-amber-600 rounded-xl text-xs font-bold uppercase">
+                Повторить загрузку скрипта
+            </button>
+        </div>
     </div>
 
     <script>
-        const webapp = window.Telegram.WebApp;
-        webapp.ready();
-        
         const logContent = document.getElementById('logContent');
+        const sdkStatusLabel = document.getElementById('sdkStatus');
         const btn = document.getElementById('adBtn');
+        const retryArea = document.getElementById('retryArea');
 
         function addLog(text, color = 'text-slate-300') {
             const entry = document.createElement('div');
@@ -50,49 +55,66 @@
             logContent.scrollTop = logContent.scrollHeight;
         }
 
-        addLog("Приложение запущено", "text-blue-400");
-        addLog("Platform: " + webapp.platform);
-
-        if (!window.Adsgram) {
-            addLog("КРИТИЧЕСКАЯ ОШИБКА: SDK Adsgram не загружен!", "text-red-500");
-        } else {
-            addLog("SDK Adsgram успешно загружен", "text-emerald-500");
+        function handleScriptError() {
+            addLog("ОШИБКА: Не удалось загрузить скрипт с adsgram.ai", "text-red-500");
+            sdkStatusLabel.innerText = "ОШИБКА ЗАГРУЗКИ СКРИПТА";
+            sdkStatusLabel.classList.replace('text-yellow-500', 'text-red-500');
+            retryArea.classList.remove('hidden');
         }
 
-        // Инициализация
-        const AdController = window.Adsgram.init({ blockId: "430" });
+        function retryLoadSDK() {
+            addLog("Повторная попытка загрузки...");
+            const oldScript = document.getElementById('adsgram-script');
+            if (oldScript) oldScript.remove();
+            
+            const newScript = document.createElement('script');
+            newScript.id = 'adsgram-script';
+            newScript.src = "https://adsgram.ai/sdk/v1/adsgram-sdk.js?v=" + Date.now();
+            newScript.onload = () => checkSDK();
+            newScript.onerror = () => handleScriptError();
+            document.head.appendChild(newScript);
+        }
+
+        function checkSDK() {
+            if (window.Adsgram) {
+                addLog("Adsgram SDK: УСПЕШНО ЗАГРУЖЕН", "text-emerald-400");
+                sdkStatusLabel.innerText = "SDK ГОТОВ";
+                sdkStatusLabel.classList.replace('text-yellow-500', 'text-emerald-500');
+                btn.disabled = false;
+                retryArea.classList.add('hidden');
+            } else {
+                handleScriptError();
+            }
+        }
+
+        window.onload = () => {
+            addLog("Приложение запущено");
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.ready();
+                addLog("Telegram WebApp: " + window.Telegram.WebApp.platform, "text-blue-400");
+            }
+            
+            // Небольшая задержка для проверки
+            setTimeout(checkSDK, 1000);
+        };
 
         btn.onclick = () => {
-            addLog("Нажата кнопка запуска...", "text-yellow-400");
+            addLog("Запуск блока 430...");
+            const AdController = window.Adsgram.init({ blockId: "430" });
+            
             btn.disabled = true;
             btn.innerText = "ЗАГРУЗКА...";
-            btn.style.opacity = "0.5";
-
-            addLog("Вызов AdController.show()...");
 
             AdController.show()
-                .then((result) => {
-                    addLog("РЕЗУЛЬТАТ: Успешный показ!", "text-emerald-400 font-bold");
-                    addLog("Данные: " + JSON.stringify(result));
-                    webapp.HapticFeedback.notificationOccurred('success');
+                .then((res) => {
+                    addLog("УСПЕХ: Реклама завершена", "text-emerald-400 font-bold");
                 })
-                .catch((error) => {
-                    addLog("ОШИБКА ПОКАЗА!", "text-red-400 font-bold");
-                    addLog("Детали: " + JSON.stringify(error));
-                    
-                    if (error.error === "No ads") {
-                        addLog("Подсказка: В вашем регионе сейчас нет доступной рекламы.", "text-orange-400");
-                    } else if (error.error === "Invalid block") {
-                        addLog("Подсказка: Блок 430 отклонен. Нужен личный ID.", "text-orange-400");
-                    }
-                    
-                    webapp.HapticFeedback.notificationOccurred('error');
+                .catch((err) => {
+                    addLog("ОТКЛОНЕНО: " + JSON.stringify(err), "text-red-400");
                 })
                 .finally(() => {
                     btn.disabled = false;
-                    btn.innerText = "ЗАПУСТИТЬ РЕКЛАМУ";
-                    btn.style.opacity = "1";
-                    addLog("Процесс завершен", "text-slate-500");
+                    btn.innerText = "ПРОВЕРИТЬ РЕКЛАМУ";
                 });
         };
     </script>
